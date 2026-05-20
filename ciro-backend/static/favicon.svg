@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+    <!-- Background -->
+    <rect width="100" height="100" rx="20" fill="#0d1117" />
+    
+    <!-- Outer green pulsing radar ring -->
+    <circle cx="50" cy="50" r="35" fill="none" stroke="#2ecc71" stroke-width="4" stroke-opacity="0.8" />
+    
+    <!-- Inner glowing green dot -->
+    <circle cx="50" cy="50" r="15" fill="#2ecc71" opacity="0.9" />
+    
+    <!-- Pulse wave effect -->
+    <circle cx="50" cy="50" r="25" fill="none" stroke="#2ecc71" stroke-width="2" stroke-opacity="0.3" />
+</svg>

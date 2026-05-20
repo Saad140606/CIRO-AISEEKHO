@@ -90,6 +90,13 @@ async def root_redirect():
     return RedirectResponse(url="/static/index.html")
 
 
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    """Serve the favicon to prevent 404 errors in standard browser requests."""
+    from fastapi.responses import FileResponse
+    return FileResponse("static/favicon.svg", media_type="image/svg+xml")
+
+
 
 # ═══════════════════════════════════════════════════════════════════
 # PRE-BUILT SCENARIO DATA
