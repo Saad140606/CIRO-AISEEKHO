@@ -1,46 +1,50 @@
-# CIRO — Crisis Intelligence & Response Orchestrator
+# 🗺️ CIRO — Crisis Intelligence & Response Orchestrator
 
-> **Challenge 3 Submission** | AI Seekho Hackathon  
-> Multi-agent AI system that detects urban crises from multi-source signals and coordinates simulated emergency responses for Pakistani cities.
-
----
-
-## 🎯 Problem Statement
-
-Pakistani metropolitan cities frequently face localized crises — urban flooding, heatwaves, road accidents, and infrastructure failures — but response systems remain **fragmented, reactive, and slow to coordinate**. Critical signals from social media, weather APIs, traffic systems, and field reports exist but are **not converted into actionable decisions in real time**.
-
-CIRO solves this by building an **Agentic AI System** that:
-1. **Ingests** multi-source signals (social media, weather, traffic, manual reports)
-2. **Detects** emerging crisis situations using NLP + signal clustering
-3. **Generates** coordinated response actions
-4. **Simulates** execution of those actions
-5. **Visualizes** before/after impact of decisions
+> **Challenge 3 Submission** | **AI Seekho Hackathon**  
+> An advanced, multi-agent AI system designed to detect localized urban crises in Pakistani metropolitan areas from noisy multi-source signals and orchestrate simulated emergency responses. Powered by **Google Antigravity** planning and **LangGraph** execution.
 
 ---
 
-## 🏗️ System Architecture
+## 🎯 Project Overview & Purpose
+
+Pakistani metropolitan cities (Islamabad, Karachi, Lahore) frequently face localized crises such as severe urban flooding, intense heatwaves, road accidents, and critical infrastructure failures. However, standard response mechanisms are often **fragmented, reactive, and slow to coordinate**. Data from social media (in English, Urdu, and Roman Urdu), weather reports, traffic cameras, and manual field observations remain siloed, delaying real-time emergency mitigation.
+
+**CIRO (Crisis Intelligence & Response Orchestrator)** solves this by engineering a fully integrated **Agentic AI System** that:
+1. **Ingests** noisy, multi-lingual inputs (including Roman Urdu and Urdu slang).
+2. **Normalizes & Clusters** related signals to pinpoint exact crisis locations.
+3. **Assesses** crisis type, severity level (CRITICAL/HIGH/MEDIUM/LOW), and confidence.
+4. **Calibrates** findings against localized historical incident databases.
+5. **Orchestrates** multi-channel responses: traffic rerouting, emergency dispatch, public alerts, and municipal tickets.
+6. **Simulates** Before/After impact to measure recovery rates and dispatch times.
+7. **Presents** real-time interactive progress to field operators via high-performance web and mobile dashboards.
+
+---
+
+## 🏗️ System Architecture & Data Flow
+
+CIRO utilizes a hierarchical workflow where **Google Antigravity** acts as the high-level orchestration, execution planning, and developer tracing layer, wrapping around a robust **LangGraph StateGraph** multi-agent pipeline.
 
 ```mermaid
 graph TD
     subgraph "Input Sources"
         SM["📱 Social Media Posts<br/>(English, Urdu, Roman Urdu)"]
-        WX["🌦️ Weather API<br/>(OpenWeatherMap + Mock)"]
-        TR["🚗 Traffic API<br/>(Simulated Congestion Data)"]
-        MR["📋 Manual Reports<br/>(Field Reports, CDA/EDHI)"]
+        WX["🌦️ Weather API<br/>(OpenWeatherMap + Live Fallback)"]
+        TR["🚗 Traffic Feeds<br/>(Simulated Congestion Data)"]
+        MR["📋 Manual Field Reports<br/>(CDA, WASA, EDHI, Rescue 1122)"]
     end
 
     subgraph "Google Antigravity Orchestration Layer"
-        AG["🤖 Antigravity IDE<br/>Multi-Agent Workflow Orchestrator"]
+        AG["🤖 Antigravity Core<br/>High-Level Execution Planning & Tracing"]
     end
 
     subgraph "LangGraph Multi-Agent Pipeline"
-        SUP["🧠 Supervisor Router<br/>Conditional State-Based Routing"]
+        SUP["🧠 Supervisor Router<br/>Conditional State Routing"]
         A1["Agent 1: Signal Ingestor<br/>ReAct Agent + Weather/Traffic Tools"]
         A2["Agent 2: Situation Analyst<br/>ReAct Agent + Historical Data Tool"]
-        A3["Agent 3: Response Orchestrator<br/>ReAct Agent + 4 Action Tools"]
+        A3["Agent 3: Response Orchestrator<br/>ReAct Agent + 4 Simulation Tools"]
     end
 
-    subgraph "Tool Layer"
+    subgraph "Specialized Tool Layer"
         T1["weather_lookup_tool"]
         T2["traffic_lookup_tool"]
         T3["historical_data_tool"]
@@ -50,218 +54,98 @@ graph TD
         T7["ticket_creation_tool"]
     end
 
-    subgraph "Simulation & Output"
-        SIM["🗺️ Route Simulation<br/>Alternate routes pushed"]
-        EMG["🚑 Emergency Dispatch<br/>Units dispatched with ETA"]
-        ALR["📢 Citizen Alerts<br/>SMS/Push/Radio broadcast"]
-        TKT["🎫 Incident Tickets<br/>Tracked + escalated"]
+    subgraph "Simulated Execution Outlets"
+        SIM["🗺️ Live Route Rerouting<br/>Alternate routes pushed to navigation"]
+        EMG["🚑 Emergency Dispatch<br/>Dispatches units with real-time ETA"]
+        ALR["📢 Public Alerts<br/>SMS/Push/Radio broadcasts"]
+        TKT["🎫 Incident Tickets<br/>Logged & assigned to Sector Ops"]
     end
 
-    subgraph "Frontend (Flutter)"
-        APP["📱 CIRO Mobile App<br/>Dark theme, 6 screens"]
-        SSE["🔄 SSE Real-time Stream<br/>Live agent trace"]
+    subgraph "Real-Time User Interfaces"
+        WEB["💻 Web Dashboard<br/>Vanilla JS + SSE + Leaflet Maps"]
+        MOB["📱 Flutter Mobile App<br/>Provider State + Custom Animations"]
+        SSE["🔄 Server-Sent Events (SSE)<br/>Real-time JSON/State updates"]
     end
 
     SM & WX & TR & MR --> AG
     AG --> SUP
-    SUP --> A1 --> A2 --> A3
+    SUP --> A1
     A1 --> T1 & T2
+    A1 --> A2
     A2 --> T3
+    A2 --> A3
     A3 --> T4 & T5 & T6 & T7
     T4 --> SIM
     T5 --> EMG
     T6 --> ALR
     T7 --> TKT
-    A3 --> SSE --> APP
+    A3 --> SSE
+    SSE --> WEB
+    SSE --> MOB
 ```
 
 ---
 
-## 🤖 Google Antigravity Usage (Mandatory Requirement)
+## 🛠️ Complete Tech Stack & Languages
 
-CIRO leverages **Google Antigravity** as the core development and orchestration platform:
+CIRO is architected using modern, highly resilient technologies to ensure rapid execution and robust fallback options.
 
-### How Antigravity Powers CIRO
+### 1. Languages
+* **Python (v3.11+)**: Powers the core backend, multi-agent reasoning, and orchestration services.
+* **Dart (v3.1+)**: Powers the cross-platform Flutter mobile dashboard.
+* **JavaScript (ES6+)**: Powers the static web application and live SSE subscriber.
+* **HTML5 & CSS3**: Custom dark-themed, glassmorphic UI layout with premium aesthetics.
 
-| Capability | How CIRO Uses It |
-|---|---|
-| **Multi-agent workflow orchestration** | Antigravity orchestrated the design, implementation, and debugging of our 3-agent LangGraph pipeline. The supervisor routing logic, agent prompts, and tool integration were all developed through Antigravity's agentic workflow. |
-| **Planning & decision-making** | Antigravity's planning mode was used to analyze the challenge requirements, design the system architecture, and make key technical decisions (LLM selection, state management, SSE streaming strategy). |
-| **Tool integration** | Antigravity coordinated the integration of Weather API (OpenWeatherMap), Traffic simulation, Google Maps-style route updates, and emergency dispatch systems. Each tool was designed and tested through Antigravity's execution capabilities. |
-| **Code generation & debugging** | All backend agents, the LangGraph pipeline, FastAPI endpoints, Flutter screens, and the SSE streaming layer were developed using Antigravity's code generation and parallel subagent execution. |
-| **Simulated action coordination** | Antigravity planned and implemented the simulation layer: route updates pushed to navigation apps, emergency dispatch with ETA calculations, citizen alert broadcasting, and incident ticket management. |
+### 2. Backend Infrastructure
+* **FastAPI**: Asynchronous, high-performance web framework for API endpoints.
+* **Uvicorn**: Lightning-fast ASGI web server.
+* **SSE-Starlette**: Implements Server-Sent Events (SSE) for real-time trace streaming.
+* **Pydantic**: Robust data validation and strict typing for requests/responses.
+* **Python-Dotenv**: Manages sensitive environment configurations.
+* **Httpx**: For asynchronous, non-blocking Weather API requests.
 
-### Antigravity Agent Traces
+### 3. AI Agentic & LLM Orchestration
+* **Google Antigravity**: Orchestrates the entire lifecycle: creates execution plans, monitors status, captures agent steps, and compiles live developer traces.
+* **LangGraph**: Implements a cyclic StateGraph with supervisor conditional routing to control state flows.
+* **LangChain**: Binds specialized tools to agents using the ReAct (Reasoning and Acting) execution pattern.
+* **Resilient Multi-Provider Fallback Chain**:
+  * **Primary**: Google Gemini (`gemini-2.0-flash`, `gemini-1.5-flash`, `gemini-1.5-pro` with 5 automatic retries).
+  * **Secondary (Rate-Limit Fallback)**: Groq (`llama-3.3-70b-versatile`, `llama3-8b-8192`).
+  * **Tertiary (Offline Backup)**: Zhipu AI GLM (`glm-4-flash`).
 
-The agent trace logs (visible in the Flutter app's Incident Detail screen) show the full reasoning chain:
-- **Signal Ingestor**: Tool calls to weather/traffic APIs, Roman Urdu parsing, signal clustering
-- **Situation Analyst**: Historical data lookup, multi-signal reasoning, severity assessment
-- **Response Orchestrator**: Coordinated tool execution (route→dispatch→alert→ticket), before/after state simulation
-
----
-
-## 🔄 Multi-Agent Pipeline
-
-### Agent 1: Signal Ingestor (ReAct Agent)
-- **Tools**: `weather_lookup_tool`, `traffic_lookup_tool`
-- **Capabilities**: Processes noisy, multi-language input (English + Roman Urdu + Urdu)
-- **Output**: Normalized signals, detected anomalies, signal clusters, extracted location
-
-### Agent 2: Situation Analyst (ReAct Agent)
-- **Tools**: `historical_data_tool`
-- **Capabilities**: Deep multi-signal reasoning, severity classification, confidence scoring
-- **Output**: Crisis type, severity (CRITICAL/HIGH/MEDIUM/LOW), confidence, affected area, impact estimate
-
-### Agent 3: Response Orchestrator (ReAct Agent)
-- **Tools**: `route_update_tool`, `emergency_dispatch_tool`, `alert_dispatch_tool`, `ticket_creation_tool`
-- **Capabilities**: Executes coordinated response actions, simulates before/after state
-- **Output**: Action plan, simulation results, before/after state comparison, outcome summary
-
-### Supervisor Router
-- Conditional state-based routing through the LangGraph StateGraph
-- Checks pipeline state to determine next agent
-- Handles errors gracefully with early termination
+### 4. Frontend & Dashboards
+* **Web Dashboard**: Vanilla JavaScript with native EventSource SSE tracking and custom CSS styling for real-time timeline animations.
+* **Mobile Dashboard (Flutter)**:
+  * **Provider**: Lightweight state management for thread-safe state synchronization.
+  * **Flutter Map & Latlong2**: Leaflet-powered interactive maps showing pulsing crisis circles and dynamic dispatch route polylines.
+  * **Shimmer**: Smooth shimmer placeholders for analytical loading states.
+  * **Url Launcher & Intl**: Handles localization and direct mapping actions.
 
 ---
 
-## 📱 Flutter Mobile App
+## 🌟 Core Features
 
-The mandatory mobile app includes 6 screens:
+### 📡 1. Intelligent Multi-lingual Ingestion
+Processes conversational English, native Urdu script, and highly informal Roman Urdu (e.g., *"G-10 mein pani bhar gaya hai, gaariyan phans gayi hain"*). Normalizes noisy social media threads into a uniform English data structure, extracting precise Pakistani landmarks and neighbourhoods (Fazl-e-Haq Road, Hussain Chowk, MA Jinnah Road).
 
-| Screen | Description |
-|---|---|
-| **Dashboard** | Live stats, quick scenario buttons, recent incidents |
-| **Simulate** | Pre-built Pakistani crisis scenarios with one-click launch |
-| **Manual Input** | Custom signal entry (social posts, manual reports, weather/traffic overrides) |
-| **Incidents** | All incidents list with severity badges, status tracking |
-| **Crisis Map** | Visual map showing crisis zone, blocked/alternate routes, emergency markers |
-| **Outcome** | Before/after comparison with animated stats and action timeline |
+### 🧠 2. Dual-Layer Orchestration (Antigravity & LangGraph)
+Combines the high-level intent planning of **Google Antigravity** with the structured state transitions of **LangGraph**. Antigravity drafts an execution plan, steps the supervisor through the required nodes, and monitors durations. LangGraph manages the state variable (`CIROState`), ensuring safe parallel execution.
 
-### Key Features
-- **Dark theme** with GitHub-inspired color palette
-- **SSE streaming** for real-time agent trace visualization
-- **Incident detail** with agent trace expansion (full JSON output)
-- **Severity banners** with color-coded crisis indicators
-- **Shimmer loading** states during analysis
+### 📚 3. Historical Risk Calibration
+The Situation Analyst calls the `historical_data_tool` to query past localized disasters in Islamabad, Karachi, and Lahore. It calibrates current alert levels by comparing average response times, casualties, and infrastructure vulnerabilities, avoiding false positives.
 
----
+### 🚑 4. Coordinated ReAct Simulation
+The Response Orchestrator leverages four distinct tools to execute a prioritized action plan:
+* **Route Rerouting**: Pushes alternate routes to navigation apps (Google Maps, Waze), reducing local congestion by 40-55%.
+* **Emergency Dispatch**: Selects and dispatches specific Pakistani emergency services (Rescue 1122, WASA, EDHI Foundation, NDMA, Rangers QRF) with realistic ETA calculations.
+* **Mass Citizen Alerts**: Distributes alerts via SMS, Push Notifications, and Radio Broadcasts depending on crisis type.
+* **Ticket Logging**: Auto-generates system-level incident tickets (SLA-tracked) assigned to Sector Emergency Operations.
 
-## 📋 Pre-Built Scenarios
+### 🔄 5. Live SSE Trace Streaming
+Both the web and mobile frontends subscribe to an active EventSource endpoint (`/api/stream/{incident_id}`). Every single reasoning step, tool call, weather lookup, and simulated decision is streamed instantly as a styled timeline card.
 
-| Scenario | Description | City | Crisis Type |
-|---|---|---|---|
-| `flooding_g10` | Flash flooding at G-10 Markaz, vehicles stranded | Islamabad | Urban Flooding |
-| `heatwave_karachi` | Extreme heat 45°C, heatstroke cases in Saddar | Karachi | Heatwave |
-| `accident_mm_alam` | Multi-vehicle collision, road blocked | Lahore | Road Accident |
-| `infra_failure_saddar` | Water main burst, sinkhole, gas leak | Karachi | Infrastructure Failure |
-
-Each scenario includes social media posts (English + Roman Urdu), weather data, traffic data, and manual field reports.
-
----
-
-## 🛠️ Tools & APIs
-
-| Tool | Type | Description |
-|---|---|---|
-| OpenWeatherMap API | Live + Mock fallback | Real-time weather data for Pakistani cities |
-| Traffic Simulation | Mock | Congestion %, stranded vehicles, affected roads |
-| Historical Incidents | Mock | Past crisis data for pattern comparison |
-| Route Update | Simulation | Push alternate routes to Google Maps/Waze |
-| Emergency Dispatch | Simulation | Deploy rescue/medical/police units with ETA |
-| Citizen Alert | Simulation | SMS/Push/Radio broadcast to affected area |
-| Incident Ticket | Simulation | Create + assign emergency management tickets |
-
----
-
-## 🚀 Setup Instructions
-
-### Prerequisites
-- Python 3.11+
-- Flutter SDK 3.11+
-- At least one LLM API key (Gemini recommended)
-
-### Backend Setup
-
-```bash
-cd ciro-backend
-
-# Create virtual environment
-python -m venv venv
-venv\Scripts\activate  # Windows
-# source venv/bin/activate  # macOS/Linux
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Configure environment
-cp .env.example .env
-# Edit .env and add your API keys
-
-# Run the server
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-### Flutter App Setup
-
-```bash
-cd ciro-mobile
-
-# Install dependencies
-flutter pub get
-
-# Configure backend URL
-# Edit .env file — set BACKEND_URL to your backend address
-# Default: http://10.0.2.2:8000 (Android emulator → localhost)
-
-# Run on device/emulator
-flutter run
-```
-
-### Environment Variables
-
-| Variable | Required | Description |
-|---|---|---|
-| `GOOGLE_API_KEY` | At least one LLM key | Google Gemini API key |
-| `GROQ_API_KEY` | At least one LLM key | Groq inference API key |
-| `GLM_API_KEY` | At least one LLM key | Zhipu AI GLM key |
-| `OPENWEATHERMAP_API_KEY` | Optional | Live weather data (falls back to mock) |
-| `BACKEND_URL` (Flutter) | Optional | Backend URL (default: `http://10.0.2.2:8000`) |
-
----
-
-## 🔌 API Endpoints
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/api/analyze` | Analyze custom signals |
-| `POST` | `/api/simulate/scenario` | Run pre-built scenario |
-| `GET` | `/api/stream/{incident_id}` | SSE stream of pipeline updates |
-| `GET` | `/api/incidents` | List all incidents |
-| `GET` | `/api/incidents/{id}` | Get incident detail |
-| `GET` | `/api/incidents/{id}/trace` | Get agent trace |
-| `GET` | `/api/health` | Health check |
-
----
-
-## 📐 LLM Fallback Chain
-
-CIRO uses a resilient 3-provider fallback chain:
-
-1. **Google Gemini** (`gemini-2.0-flash`) — Primary, free tier
-2. **Groq** (`llama-3.3-70b-versatile`) — Fast inference fallback
-3. **Zhipu AI GLM** (`glm-4-flash`) — Backup provider
-
-If no API key is configured, the system raises a clear error message.
-
----
-
-## 📝 Assumptions
-
-- Weather and traffic data use simulated APIs with realistic Pakistani city data when live APIs are unavailable
-- Emergency dispatch units and alternate routes are pre-configured for demonstration purposes
-- Social media posts are provided as text input (no live social media API integration)
-- Historical incident data is simulated based on realistic patterns
-- The system demonstrates the decision-making pipeline, not production-ready emergency management
+### 💻 6. Google Antigravity Dev Trace panel
+For developer transparency, the backend features an endpoint `/api/antigravity/traces` which parses the actual local Antigravity compilation logs (`transcript.jsonl`), displaying the live agent thinking process directly inside the developer dashboard.
 
 ---
 
@@ -269,64 +153,70 @@ If no API key is configured, the system raises a clear error message.
 
 ```
 ciro-ai-seekho-main/
-├── README.md
-├── ciro-backend/
+├── README.md                 # Project Overview & Architecture
+├── instructions.md           # Local Installation & Verification Guide
+├── walkthrough.md            # Detailed Developer Architectural Walkthrough
+├── ciro-backend/             # FastAPI Backend Service
 │   ├── agents/
-│   │   ├── signal_ingestor.py      # Agent 1: Signal processing
-│   │   ├── situation_analyst.py    # Agent 2: Crisis analysis
-│   │   └── response_orchestrator.py # Agent 3: Action execution
+│   │   ├── signal_ingestor.py       # Agent 1: Signal translation & normalization
+│   │   ├── situation_analyst.py     # Agent 2: Crisis severity & historical analysis
+│   │   └── response_orchestrator.py  # Agent 3: Action execution & before/after simulation
 │   ├── app/
-│   │   └── main.py                 # FastAPI application
+│   │   └── main.py                  # FastAPI Application, SSE Stream & endpoints
 │   ├── core/
-│   │   └── llm_factory.py          # LLM provider fallback chain
+│   │   └── llm_factory.py           # Gemini & Groq fallback provider chain
 │   ├── graph/
-│   │   ├── pipeline.py             # LangGraph pipeline
-│   │   ├── state.py                # CIROState definition
-│   │   └── supervisor.py           # Routing logic
+│   │   ├── pipeline.py              # Antigravity runner & compiled LangGraph
+│   │   ├── state.py                 # CIROState variables (TypedDict)
+│   │   └── supervisor.py            # Supervisor conditional routing logic
 │   ├── models/
-│   │   └── schemas.py              # Pydantic request/response models
+│   │   └── schemas.py               # Pydantic schemas for REST validation
 │   ├── store/
-│   │   └── incident_store.py       # In-memory incident storage
+│   │   └── incident_store.py        # Thread-safe in-memory incident database
 │   ├── tools/
-│   │   ├── simulated_apis.py       # Weather, traffic, route, dispatch
-│   │   ├── langchain_tools.py      # LangChain tool wrappers
-│   │   └── historical_data.py      # Historical incident data
-│   ├── requirements.txt
-│   └── .env.example
-└── ciro-mobile/
-    └── lib/
-        ├── main.dart
-        ├── api/ciro_api.dart
-        ├── models/
-        │   ├── incident.dart
-        │   ├── agent_trace.dart
-        │   └── log_entry.dart
-        ├── providers/incident_provider.dart
-        ├── screens/
-        │   ├── home_screen.dart
-        │   ├── main_tab/
-        │   │   ├── dashboard_screen.dart
-        │   │   ├── scenario_screen.dart
-        │   │   ├── signal_input_screen.dart
-        │   │   ├── map_screen.dart
-        │   │   └── outcome_screen.dart
-        │   └── logs_tab/
-        │       ├── incidents_list_screen.dart
-        │       ├── incident_detail_screen.dart
-        │       └── agent_trace_screen.dart
-        └── widgets/
-            ├── sidebar.dart
-            ├── crisis_severity_banner.dart
-            ├── incident_card.dart
-            ├── agent_step_tile.dart
-            ├── log_type_badge.dart
-            └── signal_chip.dart
+│   │   ├── simulated_apis.py        # Weather, Traffic, Dispatch, Alert, & Ticket engines
+│   │   ├── langchain_tools.py       # LangChain @tool decorators for agents
+│   │   └── historical_data.py       # Simulated historical Pakistani crisis records
+│   ├── static/                      # Web Frontend Dashboard
+│   │   ├── index.html               # Main visual dashboard structure
+│   │   ├── style.css                # Premium dark glassmorphic styling
+│   │   └── app.js                   # Web SSE streaming and map controllers
+│   ├── requirements.txt             # Python dependencies
+│   ├── render.yaml                  # Render PaaS configuration
+│   └── .env.example                 # Backend environment variable template
+└── ciro-mobile/              # Flutter Cross-Platform Mobile Dashboard
+    ├── lib/
+    │   ├── main.dart                # Application entrypoint
+    │   ├── api/
+    │   │   └── ciro_api.dart        # SSE Stream client and API hooks
+    │   ├── models/
+    │   │   ├── incident.dart        # Incident structures
+    │   │   ├── log_entry.dart       # SSE live log model
+    │   │   └── agent_trace.dart     # Detailed agent steps
+    │   ├── providers/
+    │   │   └── incident_provider.dart # Thread-safe mobile state management
+    │   ├── screens/
+    │   │   ├── home_screen.dart     # Dashboard wrapper with responsive rail
+    │   │   ├── main_tab/
+    │   │   │   ├── dashboard_screen.dart    # System metrics & rapid actions
+    │   │   │   ├── scenario_screen.dart     # Pre-built mock incident triggers
+    │   │   │   ├── signal_input_screen.dart # Manual signal override screen
+    │   │   │   ├── map_screen.dart          # Leaflet map showing blocked & alternate routes
+    │   │   │   └── outcome_screen.dart      #Side-by-side Before/After statistics
+    │   │   └── logs_tab/
+    │   │       ├── incidents_list_screen.dart # Directory of all tracked crises
+    │   │       ├── incident_detail_screen.dart # SSE trace viewer & live logs
+    │   │       └── agent_trace_screen.dart    # Detailed JSON trace explorer
+    │   └── widgets/
+    │       ├── sidebar.dart             # Responsive NavigationRail / Drawer
+    │       ├── crisis_severity_banner.dart # Responsive color-coded banner
+    │       └── incident_card.dart       # Interactive summary card
+    └── pubspec.yaml                 # Flutter dependencies & configurations
 ```
 
 ---
 
-## 👥 Team
+## 👥 Submission Team
 
-**AI Seekho** — Challenge 3: Crisis Intelligence & Response Orchestrator
-
-Built with ❤️ using Google Antigravity, LangGraph, Gemini, FastAPI, and Flutter.
+**CIRO Team** — Challenge 3: *Crisis Intelligence & Response Orchestrator*.  
+Developed with ❤️ using Google Antigravity, LangGraph, Gemini, FastAPI, and Flutter for the **AI Seekho Hackathon**.

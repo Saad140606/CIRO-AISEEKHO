@@ -57,23 +57,47 @@ class CiroApi {
 
     try {
       final response = await client.send(request);
-      
       if (response.statusCode != 200) {
         throw Exception('Failed to connect to stream: ${response.statusCode}');
       }
 
+      String eventType = '';
+      final dataBuffer = StringBuffer();
+
       await for (var chunk in response.stream.transform(utf8.decoder).transform(const LineSplitter())) {
-        if (chunk.startsWith('data: ')) {
-          final dataString = chunk.substring(6).trim();
+        if (chunk.isEmpty) {
+          final dataString = dataBuffer.toString().trim();
           if (dataString.isNotEmpty && dataString != '[DONE]') {
             try {
               final jsonData = jsonDecode(dataString);
               yield LogEntry.fromJson(jsonData);
             } catch (e) {
-              // Ignore malformed json
-              print('Error parsing SSE data: $e');
+              print('Error parsing SSE event payload: $e');
             }
           }
+          dataBuffer.clear();
+          eventType = '';
+          continue;
+        }
+
+        if (chunk.startsWith('event:')) {
+          eventType = chunk.substring(6).trim();
+          continue;
+        }
+
+        if (chunk.startsWith('data:')) {
+          dataBuffer.writeln(chunk.substring(5).trim());
+          continue;
+        }
+      }
+
+      final dataString = dataBuffer.toString().trim();
+      if (dataString.isNotEmpty && dataString != '[DONE]') {
+        try {
+          final jsonData = jsonDecode(dataString);
+          yield LogEntry.fromJson(jsonData);
+        } catch (e) {
+          print('Error parsing SSE event payload: $e');
         }
       }
     } finally {

@@ -121,6 +121,7 @@ async def run_pipeline(
 
         initial_state: CIROState = {
             "incident_id": incident_id,
+            "antigravity_plan": plan,
             "raw_signals": raw_signals,
             "normalized_signals": {},
             "situation_assessment": {},
@@ -131,9 +132,6 @@ async def run_pipeline(
             "error": None,
         }
 
-        # Log step starts for each agent as they'll be invoked
-        antigravity.log_step_start(plan, 1)
-
         # Execute the LangGraph — Antigravity monitors each step
         # The graph's supervisor_router handles internal routing
         final_state = await ciro_graph.ainvoke(initial_state)
@@ -143,36 +141,6 @@ async def run_pipeline(
         agent_traces = final_state.get("agent_trace", [])
 
         for trace in agent_traces:
-            agent_name = trace.get("agent", "")
-            trace_status = trace.get("status", "unknown")
-            summary = trace.get("output_summary", "")
-
-            # Map trace to Antigravity step
-            if "Signal Ingestor" in agent_name:
-                if trace_status == "complete":
-                    antigravity.log_step_complete(plan, 1, summary,
-                        tools_used=["weather_lookup", "traffic_lookup"])
-                    antigravity.log_step_start(plan, 2)
-                else:
-                    antigravity.log_step_error(plan, 1, trace.get("error", "Unknown"))
-
-            elif "Situation Analyst" in agent_name:
-                if trace_status == "complete":
-                    antigravity.log_step_complete(plan, 2, summary,
-                        tools_used=["historical_data"])
-                    antigravity.log_step_start(plan, 3)
-                else:
-                    antigravity.log_step_error(plan, 2, trace.get("error", "Unknown"))
-
-            elif "Response Orchestrator" in agent_name:
-                if trace_status == "complete":
-                    antigravity.log_step_complete(plan, 3, summary,
-                        tools_used=["route_update", "emergency_dispatch",
-                                    "alert_dispatch", "ticket_creation"])
-                else:
-                    antigravity.log_step_error(plan, 3, trace.get("error", "Unknown"))
-
-            # Persist each agent trace
             store.append_trace(incident_id, trace)
 
         # ── PHASE 4: Antigravity Plan Finalization ───────────────

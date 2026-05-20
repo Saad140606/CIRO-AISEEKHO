@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.prebuilt import create_react_agent
 
+from graph.antigravity_config import AgentRole, antigravity
 from graph.state import CIROState
 from tools.langchain_tools import historical_data_tool
 
@@ -126,6 +127,9 @@ def _now() -> str:
 
 def situation_analyst_node(state: CIROState) -> dict:
     """LangGraph node — runs the Situation Analyst ReAct agent."""
+    plan = state.get("antigravity_plan")
+    if plan:
+        antigravity.log_step_start(plan, 2)
     try:
         user_content = (
             "Analyze this crisis situation:\n"
@@ -160,6 +164,14 @@ def situation_analyst_node(state: CIROState) -> dict:
             "full_output": parsed,
         }
 
+        if plan:
+            antigravity.log_step_complete(
+                plan,
+                2,
+                trace_entry["output_summary"],
+                tools_used=["historical_data"],
+            )
+
         return {
             "situation_assessment": parsed,
             "status": "assessed",
@@ -174,6 +186,8 @@ def situation_analyst_node(state: CIROState) -> dict:
             "error": str(e),
             "timestamp": _now(),
         }
+        if plan:
+            antigravity.log_step_error(plan, 2, str(e))
         return {
             "situation_assessment": {"error": str(e)},
             "status": "error",

@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.prebuilt import create_react_agent
 
+from graph.antigravity_config import AgentRole, antigravity
 from graph.state import CIROState
 from tools.langchain_tools import weather_lookup_tool, traffic_lookup_tool
 
@@ -132,6 +133,9 @@ def _now() -> str:
 
 def signal_ingestor_node(state: CIROState) -> dict:
     """LangGraph node — runs the Signal Ingestor react agent."""
+    plan = state.get("antigravity_plan")
+    if plan:
+        antigravity.log_step_start(plan, 1)
     try:
         user_content = f"Process these crisis signals:\n{json.dumps(state['raw_signals'], indent=2)}"
 
@@ -162,6 +166,14 @@ def signal_ingestor_node(state: CIROState) -> dict:
             "full_output": parsed,
         }
 
+        if plan:
+            antigravity.log_step_complete(
+                plan,
+                1,
+                trace_entry["output_summary"],
+                tools_used=["weather_lookup", "traffic_lookup"],
+            )
+
         return {
             "normalized_signals": parsed,
             "status": "analyzed",
@@ -176,6 +188,8 @@ def signal_ingestor_node(state: CIROState) -> dict:
             "error": str(e),
             "timestamp": _now(),
         }
+        if plan:
+            antigravity.log_step_error(plan, 1, str(e))
         return {
             "normalized_signals": {"error": str(e)},
             "status": "error",

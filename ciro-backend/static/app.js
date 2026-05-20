@@ -371,7 +371,15 @@ function startSSEStream(incidentId) {
     document.getElementById("meta-id").textContent = incidentId.substring(0, 8) + "...";
 
     let hasCompleted = false;
+    let hasErrored = false;
     currentEventSource = new EventSource(`${API_HOST}/api/stream/${incidentId}`);
+
+    function cleanupStream() {
+        if (!currentEventSource) return;
+        currentEventSource.close();
+        currentEventSource = null;
+        setProcessingState(false);
+    }
 
     // Helper to fetch final state and update outcomes and maps
     async function fetchFinalIncidentState(id) {
@@ -514,7 +522,17 @@ function startSSEStream(incidentId) {
     // 6. Specific error event
     currentEventSource.addEventListener("error", (event) => {
         try {
-            const data = JSON.parse(event.data);
+            let data;
+            if (event.data) {
+                try {
+                    data = JSON.parse(event.data);
+                } catch (parseErr) {
+                    data = { error: event.data };
+                }
+            } else {
+                data = { error: 'Unknown backend failure' };
+            }
+
             console.error("SSE: Error event received", data);
             appendLogEntryCard({
                 agent: "System",
@@ -523,32 +541,42 @@ function startSSEStream(incidentId) {
                 content: `Error: ${data.error || 'Unknown backend failure'}`,
                 timestamp: Date.now() / 1000
             });
+            hasErrored = true;
         } catch (err) {
             console.error("SSE error listener parsing failed:", err);
         }
-        
-        currentEventSource.close();
-        currentEventSource = null;
-        setProcessingState(false);
+
+        cleanupStream();
     });
 
     // 7. Explicit Done event (normal completion)
     currentEventSource.addEventListener("done", (event) => {
         console.log("SSE: Pipeline stream finished normally.");
         hasCompleted = true;
-        currentEventSource.close();
-        currentEventSource = null;
-        setProcessingState(false);
+        cleanupStream();
         fetchFinalIncidentState(incidentId);
     });
 
     // Error handler for connection loss
     currentEventSource.onerror = (err) => {
         console.warn("SSE stream state transition / connection dropped:", err);
-        currentEventSource.close();
-        currentEventSource = null;
-        setProcessingState(false);
-        
+
+        if (!currentEventSource) {
+            return;
+        }
+
+        if (!hasCompleted && !hasErrored) {
+            appendLogEntryCard({
+                agent: "System",
+                agent_name: "System Error Handler",
+                action: "Pipeline Error Occurred",
+                content: `Stream disconnected unexpectedly. Fetching latest incident state...`,
+                timestamp: Date.now() / 1000
+            });
+        }
+
+        cleanupStream();
+
         // If we hadn't finished yet when connection closed, fetch state to be safe
         if (!hasCompleted) {
             hasCompleted = true;
@@ -573,7 +601,12 @@ function appendLogEntryCard(log) {
     }
     card.className = `stream-card ${agentClass}`;
     
-    const timeStr = new Date(log.timestamp * 1000).toLocaleTimeString();
+    const timestampValue = typeof log.timestamp === "string"
+        ? new Date(log.timestamp)
+        : new Date((log.timestamp || Date.now() / 1000) * 1000);
+    const timeStr = isNaN(timestampValue.getTime())
+        ? "Unknown time"
+        : timestampValue.toLocaleTimeString();
     
     let contentHtml = "";
     if (log.content) {

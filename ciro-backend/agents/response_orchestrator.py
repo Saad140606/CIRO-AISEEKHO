@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.prebuilt import create_react_agent
 
+from graph.antigravity_config import AgentRole, antigravity
 from graph.state import CIROState
 from tools.langchain_tools import (
     route_update_tool,
@@ -151,6 +152,9 @@ def _now() -> str:
 
 def response_orchestrator_node(state: CIROState) -> dict:
     """LangGraph node — runs the Response Orchestrator react agent."""
+    plan = state.get("antigravity_plan")
+    if plan:
+        antigravity.log_step_start(plan, 3)
     try:
         assessment = state.get("situation_assessment", {})
 
@@ -182,6 +186,19 @@ def response_orchestrator_node(state: CIROState) -> dict:
             "full_output": parsed,
         }
 
+        if plan:
+            antigravity.log_step_complete(
+                plan,
+                3,
+                trace_entry["output_summary"],
+                tools_used=[
+                    "route_update",
+                    "emergency_dispatch",
+                    "alert_dispatch",
+                    "ticket_creation",
+                ],
+            )
+
         return {
             "response_plan": parsed,
             "status": "complete",
@@ -196,6 +213,8 @@ def response_orchestrator_node(state: CIROState) -> dict:
             "error": str(e),
             "timestamp": _now(),
         }
+        if plan:
+            antigravity.log_step_error(plan, 3, str(e))
         return {
             "response_plan": {"error": str(e)},
             "status": "error",

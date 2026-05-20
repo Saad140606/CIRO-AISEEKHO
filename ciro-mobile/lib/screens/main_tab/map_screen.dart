@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:latlong2/latlong.dart' as latlong;
 import 'package:provider/provider.dart';
 import '../../providers/incident_provider.dart';
 import '../../models/incident.dart';
@@ -63,32 +63,32 @@ class _CrisisMapScreenState extends State<CrisisMapScreen>
     });
   }
 
-  LatLng _getCoords(String area) {
+  latlong.LatLng _getCoords(String area) {
     final cleanArea = area.toLowerCase();
     if (cleanArea.contains('g-10') || cleanArea.contains('islamabad')) {
-      return const LatLng(33.6844, 72.9889);
+      return const latlong.LatLng(33.6844, 72.9889);
     } else if (cleanArea.contains('saddar') || cleanArea.contains('karachi')) {
-      return const LatLng(24.8607, 67.0011);
+      return const latlong.LatLng(24.8607, 67.0011);
     } else if (cleanArea.contains('mm alam') || cleanArea.contains('lahore')) {
-      return const LatLng(31.5085, 74.3516);
+      return const latlong.LatLng(31.5085, 74.3516);
     }
-    return const LatLng(33.6844, 72.9889); // Default to Islamabad G-10
+    return const latlong.LatLng(33.6844, 72.9889); // Default to Islamabad G-10
   }
 
-  List<LatLng> _getBlockedRoute(LatLng center) {
+  List<latlong.LatLng> _getBlockedRoute(latlong.LatLng center) {
     return [
-      LatLng(center.latitude - 0.004, center.longitude - 0.004),
+      latlong.LatLng(center.latitude - 0.004, center.longitude - 0.004),
       center,
-      LatLng(center.latitude + 0.003, center.longitude + 0.003),
+      latlong.LatLng(center.latitude + 0.003, center.longitude + 0.003),
     ];
   }
 
-  List<LatLng> _getAltRoute(LatLng center) {
+  List<latlong.LatLng> _getAltRoute(latlong.LatLng center) {
     return [
-      LatLng(center.latitude - 0.004, center.longitude - 0.004),
-      LatLng(center.latitude - 0.002, center.longitude + 0.004),
-      LatLng(center.latitude + 0.004, center.longitude + 0.004),
-      LatLng(center.latitude + 0.003, center.longitude + 0.003),
+      latlong.LatLng(center.latitude - 0.004, center.longitude - 0.004),
+      latlong.LatLng(center.latitude - 0.002, center.longitude + 0.004),
+      latlong.LatLng(center.latitude + 0.004, center.longitude + 0.004),
+      latlong.LatLng(center.latitude + 0.003, center.longitude + 0.003),
     ];
   }
 
@@ -147,7 +147,7 @@ class _CrisisMapScreenState extends State<CrisisMapScreen>
 
     final String activeArea = incident?.affectedArea ?? 'G-10 Markaz, Islamabad';
     final String activeCrisis = incident?.crisisType ?? 'Urban Flooding';
-    final LatLng center = _getCoords(activeArea);
+    final latlong.LatLng center = _getCoords(activeArea);
 
     final showFloodPolygon = activeCrisis.toLowerCase().contains('flood') || activeCrisis.toLowerCase().contains('flooding');
 
@@ -277,7 +277,7 @@ class _CrisisMapScreenState extends State<CrisisMapScreen>
                               ),
                               if (showFloodPolygon)
                                 CircleMarker(
-                                  point: LatLng(center.latitude + 0.001, center.longitude - 0.002),
+                                  point: latlong.LatLng(center.latitude + 0.001, center.longitude - 0.002),
                                   radius: 350,
                                   useRadiusInMeter: true,
                                   color: const Color(0xFF3498DB).withOpacity(0.15 * (1 - t * 0.5)),
@@ -310,7 +310,7 @@ class _CrisisMapScreenState extends State<CrisisMapScreen>
                             MarkerLayer(
                               markers: [
                                 Marker(
-                                  point: LatLng(center.latitude + 0.003, center.longitude - 0.004),
+                                  point: latlong.LatLng(center.latitude + 0.003, center.longitude - 0.004),
                                   width: 45,
                                   height: 45,
                                   child: Opacity(
@@ -319,7 +319,7 @@ class _CrisisMapScreenState extends State<CrisisMapScreen>
                                   ),
                                 ),
                                 Marker(
-                                  point: LatLng(center.latitude - 0.002, center.longitude + 0.003),
+                                  point: latlong.LatLng(center.latitude - 0.002, center.longitude + 0.003),
                                   width: 45,
                                   height: 45,
                                   child: Opacity(
@@ -328,7 +328,7 @@ class _CrisisMapScreenState extends State<CrisisMapScreen>
                                   ),
                                 ),
                                 Marker(
-                                  point: LatLng(center.latitude + 0.0045, center.longitude + 0.002),
+                                  point: latlong.LatLng(center.latitude + 0.0045, center.longitude + 0.002),
                                   width: 45,
                                   height: 45,
                                   child: Opacity(

@@ -6,15 +6,40 @@ throughout the lifetime of the backend process.
 """
 
 from datetime import datetime, timezone
+import json
+import os
 import threading
 
 
 class IncidentStore:
     """In-memory incident store backed by a plain dict with a lock."""
 
-    def __init__(self) -> None:
+    def __init__(self, storage_path: str | None = None) -> None:
         self._data: dict[str, dict] = {}
         self._lock = threading.Lock()
+        self._storage_path = storage_path or os.path.join(
+            os.path.dirname(__file__),
+            "incidents.json",
+        )
+        self._load_from_disk()
+
+    def _load_from_disk(self) -> None:
+        if not os.path.exists(self._storage_path):
+            return
+        try:
+            with open(self._storage_path, "r", encoding="utf-8") as handle:
+                data = json.load(handle)
+                if isinstance(data, dict):
+                    self._data = data
+        except Exception:
+            # If the file is corrupted, fall back to an empty store.
+            self._data = {}
+
+    def _persist_locked(self) -> None:
+        tmp_path = f"{self._storage_path}.tmp"
+        with open(tmp_path, "w", encoding="utf-8") as handle:
+            json.dump(self._data, handle, ensure_ascii=True, indent=2)
+        os.replace(tmp_path, self._storage_path)
 
     # ------------------------------------------------------------------
     # Write operations
@@ -38,18 +63,21 @@ class IncidentStore:
                 "error": None,
                 "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             }
+            self._persist_locked()
 
     def update(self, incident_id: str, **kwargs) -> None:
         """Merge *kwargs* into the incident dict."""
         with self._lock:
             if incident_id in self._data:
                 self._data[incident_id].update(kwargs)
+                self._persist_locked()
 
     def append_trace(self, incident_id: str, trace_entry: dict) -> None:
         """Append a single trace entry to the agent_trace list."""
         with self._lock:
             if incident_id in self._data:
                 self._data[incident_id]["agent_trace"].append(trace_entry)
+                self._persist_locked()
 
     # ------------------------------------------------------------------
     # Read operations

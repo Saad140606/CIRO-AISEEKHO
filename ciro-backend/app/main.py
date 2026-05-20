@@ -105,6 +105,7 @@ async def favicon():
 SCENARIOS: dict[str, dict] = {
     "flooding_g10": {
         "social_posts": [
+            "جی-10 میں پانی بھر گیا ہے، گاڑیاں پھنس گئی ہیں",
             "G-10 mein pani bhar gaya hai, gaariyan phans gayi hain",
             "Flash flood at G-10 Markaz for the past 30 minutes, please send help",
             "Islamabad G-10 road completely under water, avoid this area",
@@ -118,6 +119,7 @@ SCENARIOS: dict[str, dict] = {
     },
     "heatwave_karachi": {
         "social_posts": [
+            "کراچی کی گرمی میں لوگ بیہوش ہو رہے ہیں، صدر میں",
             "Karachi ki garmi mein log behosh ho rahe hain Saddar mein",
             "Multiple heat stroke cases reported near Karachi Saddar",
             "Temperature feels like 50 degrees, hospitals filling up",
@@ -131,6 +133,7 @@ SCENARIOS: dict[str, dict] = {
     },
     "accident_mm_alam": {
         "social_posts": [
+            "ایم ایم عالم روڈ پر بڑا حادثہ، تین گاڑیاں ٹکرا گئی ہیں",
             "Bara hadsa MM Alam Road par, 3 gaariyan takra gayi hain",
             "Serious accident on MM Alam Road Lahore, avoid the area",
             "MM Alam Road blocked both sides due to accident",
@@ -144,6 +147,7 @@ SCENARIOS: dict[str, dict] = {
     },
     "infra_failure_saddar": {
         "social_posts": [
+            "عبداللہ ہارون روڈ میں بڑا گٹر پھٹ گیا",
             "Abdullah Haroon Road mein gutter phoot gaya bada wala",
             "Huge sinkhole appeared on MA Jinnah Road near Saddar",
             "Karachi water main burst, road collapsing near Saddar",
@@ -412,14 +416,16 @@ async def get_antigravity_config():
 
 
 def get_latest_antigravity_trace_file() -> str | None:
-    # Try finding it in user's home directory
-    base_dir = os.path.expanduser(r"~\.gemini\antigravity\brain")
-    if not os.path.exists(base_dir):
-        # Fallback to absolute path
-        base_dir = r"C:\Users\ALVI TECH\.gemini\antigravity\brain"
-        if not os.path.exists(base_dir):
-            return None
-    
+    home_dir = os.path.expanduser("~")
+    base_dirs = [
+        os.path.join(home_dir, ".gemini", "antigravity", "brain"),
+        os.path.join(os.getcwd(), ".gemini", "antigravity", "brain"),
+    ]
+
+    base_dir = next((path for path in base_dirs if os.path.exists(path)), None)
+    if not base_dir:
+        return None
+
     # Search for transcript.jsonl recursively
     pattern = os.path.join(base_dir, "**", ".system_generated", "logs", "transcript.jsonl")
     files = glob.glob(pattern, recursive=True)
