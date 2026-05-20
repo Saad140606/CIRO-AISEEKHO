@@ -9,19 +9,15 @@ from pydantic import BaseModel, Field
 class AnalyzeRequest(BaseModel):
     """Request body for the /api/analyze endpoint."""
     social_posts: list[str] = Field(default_factory=list)
-    weather_override: dict | None = None
-    traffic_override: dict | None = None
+    weather_override: dict | str | None = None
+    traffic_override: dict | str | None = None
     manual_reports: list[str] = Field(default_factory=list)
 
 
 class ScenarioRequest(BaseModel):
     """Request body for the /api/simulate/scenario endpoint."""
-    scenario: Literal[
-        "flooding_g10",
-        "heatwave_karachi",
-        "accident_mm_alam",
-        "infra_failure_saddar",
-    ]
+    scenario: str | None = None
+    scenario_id: str | None = None
 
 
 class IncidentSummary(BaseModel):

@@ -162,10 +162,77 @@ async def analyze(request: AnalyzeRequest):
     """Launch the CIRO pipeline on user-provided signals."""
     incident_id = str(uuid4())
 
+    # Map weather override from string (for web dashboard) to dictionary
+    weather = request.weather_override
+    if isinstance(weather, str):
+        if weather == "rain":
+            weather = {
+                "temp_celsius": 24,
+                "humidity_percent": 95,
+                "rainfall_mm_last_hour": 60,
+                "alert": "heavy_rain_warning",
+                "alert_level": "HIGH",
+                "source": "manual_override"
+            }
+        elif weather == "heat":
+            weather = {
+                "temp_celsius": 45,
+                "humidity_percent": 80,
+                "rainfall_mm_last_hour": 0,
+                "alert": "heatwave_warning",
+                "alert_level": "CRITICAL",
+                "source": "manual_override"
+            }
+        elif weather == "clear":
+            weather = {
+                "temp_celsius": 28,
+                "humidity_percent": 50,
+                "rainfall_mm_last_hour": 0,
+                "alert": "none",
+                "alert_level": "LOW",
+                "source": "manual_override"
+            }
+        else:
+            weather = get_weather("islamabad")
+    elif not weather:
+        weather = get_weather("islamabad")
+
+    # Map traffic override from string (for web dashboard) to dictionary
+    traffic = request.traffic_override
+    if isinstance(traffic, str):
+        if traffic == "gridlock":
+            traffic = {
+                "congestion_percent": 95,
+                "vehicles_stranded": 50,
+                "incident_detected": True,
+                "affected_roads": ["Fazl-e-Haq Road", "MA Jinnah Road"],
+                "source": "manual_override"
+            }
+        elif traffic == "heavy":
+            traffic = {
+                "congestion_percent": 75,
+                "vehicles_stranded": 10,
+                "incident_detected": True,
+                "affected_roads": ["Gulberg Boulevard"],
+                "source": "manual_override"
+            }
+        elif traffic == "normal":
+            traffic = {
+                "congestion_percent": 30,
+                "vehicles_stranded": 0,
+                "incident_detected": False,
+                "affected_roads": [],
+                "source": "manual_override"
+            }
+        else:
+            traffic = get_traffic("g10_islamabad")
+    elif not traffic:
+        traffic = get_traffic("g10_islamabad")
+
     raw_signals = {
         "social_posts": request.social_posts,
-        "weather": request.weather_override or get_weather("islamabad"),
-        "traffic": request.traffic_override or get_traffic("g10_islamabad"),
+        "weather": weather,
+        "traffic": traffic,
         "manual_reports": request.manual_reports,
     }
 
@@ -180,8 +247,15 @@ async def analyze(request: AnalyzeRequest):
 @app.post("/api/simulate/scenario", response_model=AnalyzeResponse)
 async def simulate_scenario(request: ScenarioRequest):
     """Launch the CIRO pipeline on a pre-built scenario."""
+    scenario_name = request.scenario or request.scenario_id
+    if not scenario_name or scenario_name not in SCENARIOS:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Scenario must be one of: {list(SCENARIOS.keys())}"
+        )
+
     incident_id = str(uuid4())
-    raw_signals = SCENARIOS[request.scenario]
+    raw_signals = SCENARIOS[scenario_name]
 
     incident_store.create(incident_id, raw_signals)
     asyncio.create_task(run_pipeline(incident_id, raw_signals, incident_store))
