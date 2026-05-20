@@ -363,70 +363,197 @@ function startSSEStream(incidentId) {
     }
 
     const logsContainer = document.getElementById("stream-logs");
+    logsContainer.innerHTML = ""; // Clear log cards
     logsContainer.classList.remove("hidden");
     
     const metaCard = document.getElementById("incident-meta");
     metaCard.classList.remove("hidden");
     document.getElementById("meta-id").textContent = incidentId.substring(0, 8) + "...";
 
+    let hasCompleted = false;
     currentEventSource = new EventSource(`${API_HOST}/api/stream/${incidentId}`);
 
-    currentEventSource.addEventListener("message", (event) => {
+    // Helper to fetch final state and update outcomes and maps
+    async function fetchFinalIncidentState(id) {
         try {
-            const packet = JSON.parse(event.data);
-            const eventType = packet.event;
-            const state = packet.state || {};
-            const logEntry = packet.log_entry || {};
-
-            // 1. Process logs updates
-            if (eventType === "log_entry" && logEntry.agent) {
-                appendLogEntryCard(logEntry);
-            }
-
-            // 2. Process metadata updates
-            if (state.severity) {
-                const sev = state.severity.toUpperCase();
-                const severityBadge = document.getElementById("meta-severity");
-                severityBadge.className = `meta-badge ${state.severity.toLowerCase()}`;
-                severityBadge.textContent = sev;
-
-                const severityBanner = document.getElementById("severity-banner");
-                severityBanner.className = `severity-banner ${state.severity.toLowerCase()}`;
-                severityBanner.innerHTML = `⚠️ <b>CRISIS LEVEL: ${sev}</b> — Coordinated response actions launched.`;
-            }
-            if (state.confidence) {
-                document.getElementById("meta-confidence").textContent = `${Math.round(state.confidence * 100)}%`;
-            }
-
-            // 3. Complete pipeline
-            if (eventType === "pipeline_complete" || eventType === "error") {
-                currentEventSource.close();
-                currentEventSource = null;
-                setProcessingState(false);
-                
-                if (eventType === "pipeline_complete") {
-                    currentIncident = state;
-                    updateOutcomesDashboard(state);
-                    updateMapLayers(state);
-                    
-                    // Switch to outcomes tab to "wow" the user!
-                    setTimeout(() => {
-                        const outcomesTabBtn = document.querySelector('[data-tab="outcomes"]');
-                        if (outcomesTabBtn) outcomesTabBtn.click();
-                    }, 1000);
-                }
-            }
-
+            const response = await fetch(`${API_HOST}/api/incidents/${id}`);
+            if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
+            const incident = await response.json();
+            
+            currentIncident = incident;
+            updateOutcomesDashboard(incident);
+            updateMapLayers(incident);
+            
+            // Switch to outcomes tab to "wow" the user!
+            setTimeout(() => {
+                const outcomesTabBtn = document.querySelector('[data-tab="outcomes"]');
+                if (outcomesTabBtn) outcomesTabBtn.click();
+            }, 1000);
         } catch (err) {
-            console.error("Error reading SSE packet:", err);
+            console.error("Error fetching final incident state:", err);
+        }
+    }
+
+    // 1. Initial creation event
+    currentEventSource.addEventListener("incident_created", (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            console.log("SSE: Incident created", data);
+            
+            document.getElementById("stream-empty").classList.add("hidden");
+            
+            appendLogEntryCard({
+                agent: "System",
+                agent_name: "CIRO Ingestor",
+                action: "Incident initialized successfully",
+                content: `Created incident session ID: ${data.incident_id}\nStatus: Pipeline activated.`,
+                timestamp: Date.now() / 1000
+            });
+        } catch (err) {
+            console.error("Error parsing incident_created:", err);
         }
     });
 
-    currentEventSource.onerror = (err) => {
-        console.error("SSE Connection Error:", err);
+    // 2. Real-time Multi-Agent Trace Updates
+    currentEventSource.addEventListener("agent_update", (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            console.log("SSE: Agent update received", data);
+            
+            let statusAction = "Orchestrating logic...";
+            if (data.status === "complete") {
+                statusAction = "Step Execution Completed";
+            } else if (data.status === "error") {
+                statusAction = "Execution Error";
+            }
+
+            appendLogEntryCard({
+                agent: data.agent || "Agent",
+                agent_name: data.agent,
+                action: statusAction,
+                content: data.output_summary + (data.full_output && data.full_output.reasoning ? `\n\nReasoning Plan:\n${data.full_output.reasoning}` : ""),
+                timestamp: data.timestamp || (Date.now() / 1000)
+            });
+        } catch (err) {
+            console.error("Error parsing agent_update:", err);
+        }
+    });
+
+    // 3. Raw Signal normalization complete
+    currentEventSource.addEventListener("signal_processed", (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            console.log("SSE: Signals processed", data);
+            
+            appendLogEntryCard({
+                agent: "System",
+                agent_name: "Signal Ingestor Tool",
+                action: "Multi-Source Signals Normalized",
+                content: `Clustered signals: ${JSON.stringify(data.signal_clusters || data, null, 2)}`,
+                timestamp: Date.now() / 1000
+            });
+        } catch (err) {
+            console.error("Error parsing signal_processed:", err);
+        }
+    });
+
+    // 4. Situation Assessment complete
+    currentEventSource.addEventListener("situation_assessed", (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            console.log("SSE: Situation assessed", data);
+            
+            if (data.severity) {
+                const sev = data.severity.toUpperCase();
+                const severityBadge = document.getElementById("meta-severity");
+                severityBadge.className = `meta-badge ${data.severity.toLowerCase()}`;
+                severityBadge.textContent = sev;
+
+                const severityBanner = document.getElementById("severity-banner");
+                severityBanner.className = `severity-banner ${data.severity.toLowerCase()}`;
+                severityBanner.innerHTML = `⚠️ <b>CRISIS LEVEL: ${sev}</b> — Coordinated response actions launched.`;
+            }
+            if (data.confidence) {
+                const confVal = typeof data.confidence === "number" ? Math.round(data.confidence * 100) : parseInt(data.confidence);
+                document.getElementById("meta-confidence").textContent = isNaN(confVal) ? data.confidence : `${confVal}%`;
+            }
+
+            appendLogEntryCard({
+                agent: "Situation Analyst",
+                agent_name: "Situation Analyst Agent",
+                action: `Situation Assessed: ${data.crisis_type || 'Crisis'}`,
+                content: `Severity: ${data.severity}\nConfidence: ${data.confidence}\nKey Findings: ${data.assessment_reasoning || 'No details provided.'}`,
+                timestamp: Date.now() / 1000
+            });
+        } catch (err) {
+            console.error("Error parsing situation_assessed:", err);
+        }
+    });
+
+    // 5. Response plan orchestrated
+    currentEventSource.addEventListener("response_complete", (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            console.log("SSE: Response completed", data);
+            
+            appendLogEntryCard({
+                agent: "Response Orchestrator",
+                agent_name: "Response Orchestrator Agent",
+                action: "Emergency Response Plan Generated",
+                content: `Response details:\n${JSON.stringify(data, null, 2)}`,
+                timestamp: Date.now() / 1000
+            });
+            
+            hasCompleted = true;
+            fetchFinalIncidentState(incidentId);
+        } catch (err) {
+            console.error("Error parsing response_complete:", err);
+        }
+    });
+
+    // 6. Specific error event
+    currentEventSource.addEventListener("error", (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            console.error("SSE: Error event received", data);
+            appendLogEntryCard({
+                agent: "System",
+                agent_name: "System Error Handler",
+                action: "Pipeline Error Occurred",
+                content: `Error: ${data.error || 'Unknown backend failure'}`,
+                timestamp: Date.now() / 1000
+            });
+        } catch (err) {
+            console.error("SSE error listener parsing failed:", err);
+        }
+        
         currentEventSource.close();
         currentEventSource = null;
         setProcessingState(false);
+    });
+
+    // 7. Explicit Done event (normal completion)
+    currentEventSource.addEventListener("done", (event) => {
+        console.log("SSE: Pipeline stream finished normally.");
+        hasCompleted = true;
+        currentEventSource.close();
+        currentEventSource = null;
+        setProcessingState(false);
+        fetchFinalIncidentState(incidentId);
+    });
+
+    // Error handler for connection loss
+    currentEventSource.onerror = (err) => {
+        console.warn("SSE stream state transition / connection dropped:", err);
+        currentEventSource.close();
+        currentEventSource = null;
+        setProcessingState(false);
+        
+        // If we hadn't finished yet when connection closed, fetch state to be safe
+        if (!hasCompleted) {
+            hasCompleted = true;
+            fetchFinalIncidentState(incidentId);
+        }
     };
 }
 
@@ -434,7 +561,17 @@ function appendLogEntryCard(log) {
     const logsContainer = document.getElementById("stream-logs");
     
     const card = document.createElement("div");
-    card.className = `stream-card ${log.agent.toLowerCase()}`;
+    
+    let agentClass = "system";
+    const agentLower = (log.agent || "").toLowerCase();
+    if (agentLower.includes("ingestor")) {
+        agentClass = "ingestor";
+    } else if (agentLower.includes("analyst")) {
+        agentClass = "analyst";
+    } else if (agentLower.includes("orchestrator")) {
+        agentClass = "orchestrator";
+    }
+    card.className = `stream-card ${agentClass}`;
     
     const timeStr = new Date(log.timestamp * 1000).toLocaleTimeString();
     

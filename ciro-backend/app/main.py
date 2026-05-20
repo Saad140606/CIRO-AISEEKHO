@@ -354,6 +354,10 @@ async def stream_incident(incident_id: str):
 
             # --- done ---
             if current.get("status") in ("complete",) and sent_response:
+                yield {
+                    "event": "done",
+                    "data": json.dumps({"status": "complete"}),
+                }
                 break
 
             # --- heartbeat every ~3 seconds (3 / 0.8 ≈ 4 iterations) ---
