@@ -10,12 +10,16 @@ import asyncio
 import json
 import logging
 import time
+import os
+import glob
 from contextlib import asynccontextmanager
 from uuid import uuid4
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
 from sse_starlette.sse import EventSourceResponse
 
 from models.schemas import (
@@ -75,6 +79,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Ensure static folder exists and mount it
+os.makedirs("static", exist_ok=True)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+@app.get("/")
+async def root_redirect():
+    """Redirect root to the static web application dashboard."""
+    return RedirectResponse(url="/static/index.html")
+
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -310,6 +324,70 @@ async def get_incident_trace(incident_id: str):
 async def get_antigravity_config():
     """Return the full Antigravity workflow configuration."""
     return antigravity.get_workflow_config()
+
+
+def get_latest_antigravity_trace_file() -> str | None:
+    # Try finding it in user's home directory
+    base_dir = os.path.expanduser(r"~\.gemini\antigravity\brain")
+    if not os.path.exists(base_dir):
+        # Fallback to absolute path
+        base_dir = r"C:\Users\ALVI TECH\.gemini\antigravity\brain"
+        if not os.path.exists(base_dir):
+            return None
+    
+    # Search for transcript.jsonl recursively
+    pattern = os.path.join(base_dir, "**", ".system_generated", "logs", "transcript.jsonl")
+    files = glob.glob(pattern, recursive=True)
+    if not files:
+        return None
+    # Return the most recently updated transcript
+    return max(files, key=os.path.getmtime)
+
+
+def parse_antigravity_traces() -> list[dict]:
+    trace_file = get_latest_antigravity_trace_file()
+    if not trace_file:
+        return []
+    
+    traces = []
+    try:
+        with open(trace_file, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    data = json.loads(line)
+                    # Limit size of large fields in API response to keep UI performant
+                    content = data.get("content") or ""
+                    if content and len(content) > 1000:
+                        data["content"] = content[:1000] + "... (truncated)"
+                    
+                    thinking = data.get("thinking") or ""
+                    if thinking and len(thinking) > 1000:
+                        data["thinking"] = thinking[:1000] + "... (truncated)"
+                    
+                    traces.append(data)
+                except Exception:
+                    pass
+    except Exception as e:
+        logger.error(f"Error parsing Antigravity traces: {e}")
+    return traces
+
+
+# ── GET /api/antigravity/traces ───────────────────────────────────
+
+@app.get("/api/antigravity/traces")
+async def get_antigravity_traces():
+    """Return the real Google Antigravity developer traces from the actual platform."""
+    traces = parse_antigravity_traces()
+    return {
+        "status": "success",
+        "count": len(traces),
+        "trace_file": get_latest_antigravity_trace_file(),
+        "traces": traces
+    }
+
 
 
 # ── GET /api/health ───────────────────────────────────────────────

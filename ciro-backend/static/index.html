@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CIRO — Crisis Intelligence & Response Orchestrator</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Leaflet Map CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="glass-bg"></div>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-logo">
+                <div class="logo-pulse"></div>
+                <div class="logo-text">
+                    <h1>CIRO</h1>
+                    <span>Crisis Intelligence & Response Orchestrator</span>
+                </div>
+            </div>
+            <div class="header-controls">
+                <div class="antigravity-badge">
+                    <span class="badge-dot"></span>
+                    <span>Google Antigravity Active</span>
+                </div>
+                <div id="connection-status" class="status-badge connected">
+                    <span class="status-dot"></span>
+                    <span class="status-text">System Ready</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Dashboard Content -->
+        <main class="dashboard-grid">
+            
+            <!-- Left Panel: Crisis Ingestion -->
+            <section class="panel left-panel">
+                <div class="panel-header">
+                    <h2><span class="icon">⚡</span> Crisis Signal Ingestion</h2>
+                </div>
+                
+                <div class="panel-body">
+                    <!-- Scenario Quick Launch -->
+                    <div class="control-group">
+                        <h3>Simulate Pre-Built Scenarios</h3>
+                        <div class="scenario-grid">
+                            <button class="scenario-btn" data-scenario="flooding_g10">
+                                <span class="btn-title">Urban Flood</span>
+                                <span class="btn-meta">G-10, Islamabad</span>
+                            </button>
+                            <button class="scenario-btn" data-scenario="heatwave_karachi">
+                                <span class="btn-title">Heatwave</span>
+                                <span class="btn-meta">Saddar, Karachi</span>
+                            </button>
+                            <button class="scenario-btn" data-scenario="accident_mm_alam">
+                                <span class="btn-title">Road Accident</span>
+                                <span class="btn-meta">MM Alam, Lahore</span>
+                            </button>
+                            <button class="scenario-btn" data-scenario="infra_failure_saddar">
+                                <span class="btn-title">Infra Failure</span>
+                                <span class="btn-meta">Saddar, Karachi</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="divider"><span>OR</span></div>
+
+                    <!-- Custom Signal Form -->
+                    <form id="signal-form" class="custom-signal-form">
+                        <h3>Ingest Custom Incident Signals</h3>
+                        
+                        <div class="form-group">
+                            <label for="social-posts">Social Media Posts (Urdu/Roman Urdu/English)</label>
+                            <textarea id="social-posts" placeholder="Enter social media reports, e.g.:
+- G-10 mein paani khara ho gaya hai, gaariyan phans gayin.
+- Heavy flood at G-10 markaz, send rescue teams!" required></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="manual-reports">Manual Field Reports</label>
+                            <textarea id="manual-reports" placeholder="Enter official or field worker logs, e.g.:
+- CDA: Fazl-e-Haq Road water level is 2.5 feet.
+- Rescue 1122: 30+ vehicles stranded."></textarea>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group half">
+                                <label for="weather-override">Weather Override</label>
+                                <select id="weather-override">
+                                    <option value="">Default (Auto)</option>
+                                    <option value="rain">Heavy Monsoon Rain</option>
+                                    <option value="heat">Extreme Heat (45°C)</option>
+                                    <option value="clear">Clear Skies</option>
+                                </select>
+                            </div>
+                            <div class="form-group half">
+                                <label for="traffic-override">Traffic Congestion</label>
+                                <select id="traffic-override">
+                                    <option value="">Default (Auto)</option>
+                                    <option value="gridlock">Total Gridlock (90%+)</option>
+                                    <option value="heavy">Heavy Congestion</option>
+                                    <option value="normal">Normal Traffic</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="submit-btn">
+                            <span class="spinner hidden"></span>
+                            <span class="btn-txt">Launch Agentic Analysis</span>
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Right Panel: Tabs Navigation & Views -->
+            <section class="panel right-panel">
+                <div class="tab-header">
+                    <button class="tab-btn active" data-tab="live-stream">
+                        <span class="icon">🔄</span> Agent Pipeline Stream
+                    </button>
+                    <button class="tab-btn" data-tab="crisis-map">
+                        <span class="icon">🗺️</span> Crisis Map Overlay
+                    </button>
+                    <button class="tab-btn" data-tab="outcomes">
+                        <span class="icon">📈</span> Before vs After Outcomes
+                    </button>
+                    <button class="tab-btn" data-tab="antigravity-dev">
+                        <span class="icon">🤖</span> Antigravity Dev Traces
+                    </button>
+                </div>
+
+                <div class="tab-content-container">
+                    
+                    <!-- Tab 1: Live SSE Agent Pipeline Stream -->
+                    <div id="live-stream" class="tab-content active">
+                        <div class="stream-layout">
+                            <div id="incident-meta" class="incident-meta-card hidden">
+                                <div class="meta-row">
+                                    <div class="meta-item">
+                                        <span class="meta-label">Incident ID:</span>
+                                        <span id="meta-id" class="meta-value">N/A</span>
+                                    </div>
+                                    <div class="meta-item">
+                                        <span class="meta-label">Severity:</span>
+                                        <span id="meta-severity" class="meta-badge">PENDING</span>
+                                    </div>
+                                    <div class="meta-item">
+                                        <span class="meta-label">Confidence:</span>
+                                        <span id="meta-confidence" class="meta-value">N/A</span>
+                                    </div>
+                                </div>
+                                <div id="severity-banner" class="severity-banner hidden"></div>
+                            </div>
+                            
+                            <div id="stream-empty" class="stream-empty-state">
+                                <div class="empty-icon">🤖</div>
+                                <h3>Waiting for Signals</h3>
+                                <p>Launch a pre-built scenario or submit custom signals to initiate the Google Antigravity multi-agent LangGraph pipeline.</p>
+                            </div>
+
+                            <div id="stream-logs" class="stream-log-container hidden">
+                                <!-- Appended dynamically -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: Interactive Leaflet Map -->
+                    <div id="crisis-map" class="tab-content">
+                        <div class="map-controls">
+                            <span class="map-status-label">Map Mode:</span>
+                            <div class="map-toggle-group">
+                                <button id="btn-map-before" class="map-toggle-btn active">Before Response</button>
+                                <button id="btn-map-after" class="map-toggle-btn">After Response</button>
+                            </div>
+                        </div>
+                        <div class="map-wrapper">
+                            <div id="leaflet-map"></div>
+                            <!-- Map Overlay Details -->
+                            <div class="map-legend">
+                                <div class="legend-item"><span class="legend-dot red"></span> Crisis Zone</div>
+                                <div class="legend-item"><span class="legend-dot blue"></span> Flood Zone</div>
+                                <div class="legend-item"><span class="legend-dot dashed-red"></span> Blocked Route</div>
+                                <div class="legend-item"><span class="legend-dot green"></span> Alternate Route</div>
+                                <div class="legend-item"><span class="legend-dot orange animate-pulse"></span> Rescue Unit</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 3: Before vs After Outcomes -->
+                    <div id="outcomes" class="tab-content">
+                        <div id="outcomes-empty" class="stream-empty-state">
+                            <div class="empty-icon">📈</div>
+                            <h3>No Outcome Data</h3>
+                            <p>Complete a crisis analysis to compare the simulated before/after state coordinates and metrics.</p>
+                        </div>
+
+                        <div id="outcomes-data" class="outcomes-layout hidden">
+                            <div class="impact-summary-card">
+                                <h3><span class="icon">⚡</span> Coordinated Response Impact</h3>
+                                <p id="impact-description">Coordinated response will load once pipeline completes.</p>
+                            </div>
+
+                            <div class="metrics-grid">
+                                <!-- Card 1: Traffic -->
+                                <div class="metric-card">
+                                    <div class="metric-icon-row">
+                                        <span class="metric-icon">🚗</span>
+                                        <span class="metric-label">Traffic Congestion</span>
+                                    </div>
+                                    <div class="metric-value-row">
+                                        <span id="metric-traffic-before" class="val-before">94%</span>
+                                        <span class="val-arrow">➔</span>
+                                        <span id="metric-traffic-after" class="val-after">38%</span>
+                                    </div>
+                                    <div class="metric-bar-wrapper">
+                                        <div id="metric-traffic-bar" class="metric-bar green" style="width: 38%"></div>
+                                    </div>
+                                    <div class="metric-labels">
+                                        <span>Before: Blocked</span>
+                                        <span>After: Diverted</span>
+                                    </div>
+                                </div>
+
+                                <!-- Card 2: Teams -->
+                                <div class="metric-card">
+                                    <div class="metric-icon-row">
+                                        <span class="metric-icon">🚑</span>
+                                        <span class="metric-label">Active Rescue Teams</span>
+                                    </div>
+                                    <div class="metric-value-row">
+                                        <span id="metric-teams-before" class="val-before">0</span>
+                                        <span class="val-arrow">➔</span>
+                                        <span id="metric-teams-after" class="val-after">4</span>
+                                    </div>
+                                    <div class="metric-bar-wrapper">
+                                        <div id="metric-teams-bar" class="metric-bar orange" style="width: 100%"></div>
+                                    </div>
+                                    <div class="metric-labels">
+                                        <span>Before: Standby</span>
+                                        <span>After: Dispatched</span>
+                                    </div>
+                                </div>
+
+                                <!-- Card 3: Alerted -->
+                                <div class="metric-card">
+                                    <div class="metric-icon-row">
+                                        <span class="metric-icon">📢</span>
+                                        <span class="metric-label">Citizens Alerted</span>
+                                    </div>
+                                    <div class="metric-value-row">
+                                        <span id="metric-alerts-before" class="val-before">0</span>
+                                        <span class="val-arrow">➔</span>
+                                        <span id="metric-alerts-after" class="val-after">15,000</span>
+                                    </div>
+                                    <div class="metric-bar-wrapper">
+                                        <div id="metric-alerts-bar" class="metric-bar blue" style="width: 75%"></div>
+                                    </div>
+                                    <div class="metric-labels">
+                                        <span>Before: 0%</span>
+                                        <span>After: 100% Target Area</span>
+                                    </div>
+                                </div>
+
+                                <!-- Card 4: Tickets -->
+                                <div class="metric-card">
+                                    <div class="metric-icon-row">
+                                        <span class="metric-icon">🎫</span>
+                                        <span class="metric-label">Incident Tickets Created</span>
+                                    </div>
+                                    <div class="metric-value-row">
+                                        <span id="metric-tickets-before" class="val-before">0</span>
+                                        <span class="val-arrow">➔</span>
+                                        <span id="metric-tickets-after" class="val-after">1</span>
+                                    </div>
+                                    <div class="metric-bar-wrapper">
+                                        <div id="metric-tickets-bar" class="metric-bar purple" style="width: 100%"></div>
+                                    </div>
+                                    <div class="metric-labels">
+                                        <span>Before: None</span>
+                                        <span>After: Open & Assigned</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="timeline-wrapper">
+                                <h3>Action Timeline Execution</h3>
+                                <ul id="action-timeline" class="action-timeline">
+                                    <!-- Appended dynamically -->
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 4: Google Antigravity Developer Traces -->
+                    <div id="antigravity-dev" class="tab-content">
+                        <div class="dev-traces-header">
+                            <div class="dev-meta">
+                                <h3>Google Antigravity Developer Orchestration Logs</h3>
+                                <p>Real-time execution traces of the Antigravity developer agent executing workspace updates, terminal operations, and coding tasks on the platform.</p>
+                            </div>
+                            <button id="btn-refresh-traces" class="refresh-btn">
+                                <span>🔄</span> Refresh Logs
+                            </button>
+                        </div>
+                        
+                        <div class="terminal-container">
+                            <div class="terminal-header">
+                                <div class="terminal-dots">
+                                    <span class="dot red"></span>
+                                    <span class="dot yellow"></span>
+                                    <span class="dot green"></span>
+                                </div>
+                                <div class="terminal-title">antigravity@gemini-orchestrator:~/.system_generated/logs/transcript.jsonl</div>
+                            </div>
+                            <div id="terminal-body" class="terminal-body">
+                                <div class="terminal-line system">Initialising Google Antigravity developer logs console...</div>
+                                <!-- Filled by API -->
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+        </main>
+        
+        <!-- Footer -->
+        <footer class="app-footer-bar">
+            <p>CIRO — Built with ❤️ for AI Seekho Hackathon on the Google Antigravity Platform using LangGraph, FastAPI, Leaflet, and Flutter.</p>
+        </footer>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="app.js"></script>
+</body>
+</html>

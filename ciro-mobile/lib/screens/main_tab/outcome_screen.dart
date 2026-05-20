@@ -18,9 +18,9 @@ class _OutcomeScreenState extends State<OutcomeScreen>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 1500),
     );
-    _animation = CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic);
+    _animation = CurvedAnimation(parent: _controller, curve: Curves.easeOutBack);
   }
 
   @override
@@ -69,7 +69,7 @@ class _OutcomeScreenState extends State<OutcomeScreen>
                   GestureDetector(
                     onTap: _toggle,
                     child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
+                      duration: const Duration(milliseconds: 355),
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                       decoration: BoxDecoration(
                         color: _showAfter
@@ -80,6 +80,13 @@ class _OutcomeScreenState extends State<OutcomeScreen>
                           color: _showAfter ? const Color(0xFF2ECC71) : const Color(0xFFE74C3C),
                           width: 1.5,
                         ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: (_showAfter ? const Color(0xFF2ECC71) : const Color(0xFFE74C3C)).withOpacity(0.15),
+                            blurRadius: 10,
+                            spreadRadius: 1,
+                          )
+                        ],
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -104,7 +111,11 @@ class _OutcomeScreenState extends State<OutcomeScreen>
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
+
+              // circular Efficiency Gauge (Wow item!)
+              _buildScoreGauge(t),
+              const SizedBox(height: 20),
 
               // Impact Summary Card
               Container(
@@ -112,7 +123,7 @@ class _OutcomeScreenState extends State<OutcomeScreen>
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      const Color(0xFF2ECC71).withOpacity(0.1 * t),
+                      Color.lerp(const Color(0xFFE74C3C), const Color(0xFF2ECC71), t)!.withOpacity(0.08),
                       const Color(0xFF161B22),
                     ],
                     begin: Alignment.topLeft,
@@ -120,7 +131,7 @@ class _OutcomeScreenState extends State<OutcomeScreen>
                   ),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: Color.lerp(const Color(0xFFE74C3C), const Color(0xFF2ECC71), t)!.withOpacity(0.3),
+                    color: Color.lerp(const Color(0xFFE74C3C), const Color(0xFF2ECC71), t)!.withOpacity(0.2),
                   ),
                 ),
                 child: Column(
@@ -139,7 +150,7 @@ class _OutcomeScreenState extends State<OutcomeScreen>
                           ? 'CIRO reduced response time by 40% and coordinated 4 emergency teams simultaneously. 15,000 citizens were alerted within 10 minutes of crisis detection.'
                           : 'No coordinated response active. Crisis is unmanaged. Citizens are unaware. Emergency teams have not been dispatched.',
                       style: TextStyle(
-                        color: _showAfter ? const Color(0xFF2ECC71).withOpacity(0.9) : const Color(0xFFE74C3C).withOpacity(0.9),
+                        color: Color.lerp(const Color(0xFFE74C3C), const Color(0xFF2ECC71), t)!.withOpacity(0.9),
                         fontSize: 14,
                         height: 1.5,
                       ),
@@ -213,6 +224,72 @@ class _OutcomeScreenState extends State<OutcomeScreen>
     );
   }
 
+  Widget _buildScoreGauge(double t) {
+    final score = (t * 92).round();
+    final color = Color.lerp(const Color(0xFFE74C3C), const Color(0xFF2ECC71), t)!;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF161B22),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white10),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.05),
+            blurRadius: 15,
+            spreadRadius: 2,
+          )
+        ],
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 70,
+            height: 70,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CircularProgressIndicator(
+                  value: t * 0.92,
+                  strokeWidth: 6,
+                  backgroundColor: Colors.white10,
+                  color: color,
+                ),
+                Text(
+                  '$score%',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Mitigation Effectiveness Score',
+                  style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _showAfter
+                      ? 'CIRO coordinated routing, dispatch, and warnings resolved threat states successfully.'
+                      : 'System inactive. Crisis mitigation remains at 0% efficiency.',
+                  style: const TextStyle(color: Color(0xFF8B949E), fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _metricCard({
     required IconData icon,
     required String label,
@@ -231,7 +308,13 @@ class _OutcomeScreenState extends State<OutcomeScreen>
       decoration: BoxDecoration(
         color: const Color(0xFF161B22),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: barColor.withOpacity(0.2)),
+        border: Border.all(color: barColor.withOpacity(0.15)),
+        boxShadow: [
+          BoxShadow(
+            color: barColor.withOpacity(0.02 * progress),
+            blurRadius: 8,
+          )
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -282,18 +365,19 @@ class _OutcomeScreenState extends State<OutcomeScreen>
   List<Widget> _buildTimeline(double t) {
     final events = [
       {'time': 'T+0:00', 'label': 'Crisis detected — Social media signals ingested', 'icon': Icons.sensors, 'threshold': 0.0},
-      {'time': 'T+0:02', 'label': 'Signal Ingestor processed 5 signals', 'icon': Icons.input, 'threshold': 0.1},
-      {'time': 'T+0:05', 'label': 'Situation assessed: HIGH severity, 85% confidence', 'icon': Icons.analytics, 'threshold': 0.25},
-      {'time': 'T+0:07', 'label': 'Emergency dispatch: 4 teams ordered to G-10', 'icon': Icons.local_hospital, 'threshold': 0.4},
-      {'time': 'T+0:08', 'label': 'Traffic routes updated via Google Maps / Waze', 'icon': Icons.directions, 'threshold': 0.55},
-      {'time': 'T+0:10', 'label': '15,000 citizens alerted via SMS + Push', 'icon': Icons.notifications_active, 'threshold': 0.7},
-      {'time': 'T+0:12', 'label': 'Incident ticket CIR-2025-001 created & assigned', 'icon': Icons.assignment_turned_in, 'threshold': 0.85},
+      {'time': 'T+0:02', 'label': 'Signal Ingestor processed 5 signals', 'icon': Icons.input, 'threshold': 0.15},
+      {'time': 'T+0:05', 'label': 'Situation assessed: HIGH severity, 85% confidence', 'icon': Icons.analytics, 'threshold': 0.3},
+      {'time': 'T+0:07', 'label': 'Emergency dispatch: 4 teams ordered to coordinate', 'icon': Icons.local_hospital, 'threshold': 0.5},
+      {'time': 'T+0:08', 'label': 'Traffic routes updated via Google Maps / Waze', 'icon': Icons.directions, 'threshold': 0.7},
+      {'time': 'T+0:10', 'label': '15,000 citizens alerted via SMS + Push', 'icon': Icons.notifications_active, 'threshold': 0.85},
+      {'time': 'T+0:12', 'label': 'Incident ticket created & assigned', 'icon': Icons.assignment_turned_in, 'threshold': 0.95},
     ];
 
     return events.map((e) {
       final threshold = e['threshold'] as double;
+      // Sequential entries during transition
       final isActive = t >= threshold;
-      final opacity = isActive ? 1.0 : 0.3;
+      final opacity = isActive ? 1.0 : 0.2;
       final color = isActive ? const Color(0xFF2ECC71) : const Color(0xFF8B949E);
 
       return Padding(
@@ -313,6 +397,9 @@ class _OutcomeScreenState extends State<OutcomeScreen>
                       color: isActive ? color : Colors.transparent,
                       shape: BoxShape.circle,
                       border: Border.all(color: color, width: 2),
+                      boxShadow: isActive
+                          ? [BoxShadow(color: color.withOpacity(0.5), blurRadius: 6)]
+                          : null,
                     ),
                   ),
                   Container(width: 2, height: 36, color: color.withOpacity(0.3)),
