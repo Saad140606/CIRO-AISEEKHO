@@ -542,6 +542,10 @@ function startSSEStream(incidentId) {
                 timestamp: Date.now() / 1000
             });
             hasErrored = true;
+
+            fetchFinalIncidentState(incidentId).catch((fetchErr) => {
+                console.error("Failed to fetch final incident state after error:", fetchErr);
+            });
         } catch (err) {
             console.error("SSE error listener parsing failed:", err);
         }
@@ -557,31 +561,37 @@ function startSSEStream(incidentId) {
         fetchFinalIncidentState(incidentId);
     });
 
-    // Error handler for connection loss
+    // Error handler for connection loss / transport failures
     currentEventSource.onerror = (err) => {
         console.warn("SSE stream state transition / connection dropped:", err);
 
-        if (!currentEventSource) {
+        if (!currentEventSource || hasCompleted || hasErrored) {
             return;
         }
 
-        if (!hasCompleted && !hasErrored) {
-            appendLogEntryCard({
-                agent: "System",
-                agent_name: "System Error Handler",
-                action: "Pipeline Error Occurred",
-                content: `Stream disconnected unexpectedly. Fetching latest incident state...`,
-                timestamp: Date.now() / 1000
-            });
+        // If the error event carries server-sent payload data, it is handled
+        // by the dedicated addEventListener("error") callback above.
+        if (err && typeof err.data !== "undefined" && err.data !== null) {
+            return;
         }
+
+        const readyState = currentEventSource.readyState;
+        if (readyState !== EventSource.CLOSED) {
+            return;
+        }
+
+        appendLogEntryCard({
+            agent: "System",
+            agent_name: "System Error Handler",
+            action: "Pipeline Error Occurred",
+            content: `Stream connection closed unexpectedly. Fetching latest incident state...`,
+            timestamp: Date.now() / 1000
+        });
 
         cleanupStream();
 
-        // If we hadn't finished yet when connection closed, fetch state to be safe
-        if (!hasCompleted) {
-            hasCompleted = true;
-            fetchFinalIncidentState(incidentId);
-        }
+        hasCompleted = true;
+        fetchFinalIncidentState(incidentId);
     };
 }
 
@@ -648,58 +658,52 @@ function updateOutcomesDashboard(incident) {
     const outcomesData = document.getElementById("outcomes-data");
     outcomesData.classList.remove("hidden");
 
-    // Summary description
-    const isFlood = incident.crisis_type?.toLowerCase().includes("flood");
-    const desc = document.getElementById("impact-description");
-    if (isFlood) {
-        desc.textContent = "CIRO dispatched 4 NDMA and Rescue 1122 teams. Dynamic rerouting via Google Maps lowered G-10 Markaz gridlock levels from 94% to 38% congestion. Push notifications reached 15,000 citizens in the sector within 10 minutes.";
-    } else {
-        desc.textContent = `Response coordinated successfully. Incident ticket created and teams dispatched. Affected sector traffic successfully rerouted, resolving the emergency state quickly and keeping casualties to zero.`;
-    }
+    const responsePlan = incident.response_plan || {};
+    const beforeState = responsePlan.before_state || {};
+    const afterState = responsePlan.after_state || {};
 
-    // Set metrics before/after values
-    const responseDetails = incident.response_details || {};
-    
-    // Traffic
-    const trafficBefore = "94%";
-    const trafficAfter = responseDetails.traffic_congestion_after || "38%";
+    const desc = document.getElementById("impact-description");
+    desc.textContent = responsePlan.outcome_summary
+        || `Response coordinated successfully for ${incident.crisis_type || 'this incident'}.`;
+
+    const trafficBeforeRaw = beforeState.congestion_percent ?? 94;
+    const trafficAfterRaw = afterState.congestion_percent ?? 38;
+    const trafficBefore = typeof trafficBeforeRaw === "number" ? `${trafficBeforeRaw}%` : trafficBeforeRaw;
+    const trafficAfter = typeof trafficAfterRaw === "number" ? `${trafficAfterRaw}%` : trafficAfterRaw;
     document.getElementById("metric-traffic-before").textContent = trafficBefore;
     document.getElementById("metric-traffic-after").textContent = trafficAfter;
     document.getElementById("metric-traffic-bar").style.width = trafficAfter;
 
-    // Rescue teams
-    const teamsBefore = "0";
-    const teamsAfter = responseDetails.rescue_teams_dispatched || "4";
+    const teamsBefore = beforeState.emergency_teams_deployed != null ? `${beforeState.emergency_teams_deployed}` : "0";
+    const teamsAfter = afterState.emergency_teams_deployed ?? responsePlan.emergency_teams_dispatched ?? "4";
     document.getElementById("metric-teams-before").textContent = teamsBefore;
-    document.getElementById("metric-teams-after").textContent = teamsAfter;
+    document.getElementById("metric-teams-after").textContent = `${teamsAfter}`;
     document.getElementById("metric-teams-bar").style.width = "100%";
 
-    // Alerts
-    const alertsBefore = "0";
-    const alertsAfter = responseDetails.citizens_alerted || "15,000";
+    const alertsBefore = beforeState.citizens_alerted != null ? `${beforeState.citizens_alerted}` : "0";
+    const alertsAfterRaw = afterState.citizens_alerted ?? responsePlan.citizens_alerted ?? "15,000";
+    const alertsAfter = typeof alertsAfterRaw === "number" ? alertsAfterRaw.toLocaleString() : alertsAfterRaw;
     document.getElementById("metric-alerts-before").textContent = alertsBefore;
-    document.getElementById("metric-alerts-after").textContent = typeof alertsAfter === "number" ? alertsAfter.toLocaleString() : alertsAfter;
+    document.getElementById("metric-alerts-after").textContent = alertsAfter;
     document.getElementById("metric-alerts-bar").style.width = "85%";
 
-    // Tickets
-    const ticketsBefore = "0";
-    const ticketsAfter = responseDetails.ticket_created ? "1" : "0";
+    const ticketsBefore = beforeState.incident_tickets != null ? `${beforeState.incident_tickets}` : "0";
+    const ticketsAfterValue = afterState.incident_tickets ?? responsePlan.incident_tickets ?? (responsePlan.ticket_created ? 1 : 0);
+    const ticketsAfter = `${ticketsAfterValue}`;
     document.getElementById("metric-tickets-before").textContent = ticketsBefore;
     document.getElementById("metric-tickets-after").textContent = ticketsAfter;
-    document.getElementById("metric-tickets-bar").style.width = ticketsAfter === "1" ? "100%" : "0%";
+    document.getElementById("metric-tickets-bar").style.width = ticketsAfter === "1" ? "100%" : "50%";
 
-    // Populating timeline
     const timeline = document.getElementById("action-timeline");
     timeline.innerHTML = "";
 
     const events = [
         { time: "T+0:00", desc: "Crisis signal ingested from English/Roman Urdu inputs" },
         { time: "T+0:02", desc: "Signal Ingestor agent completed multi-signal semantic clustering" },
-        { time: "T+0:05", desc: `Situation Analyst classified emergency: ${incident.crisis_type} (Severity: ${incident.severity})` },
-        { time: "T+0:07", desc: `Response Orchestrator dispatched emergency teams to target coordinates` },
-        { time: "T+0:09", desc: `Alternative routes pushed to navigation systems (Rerouting active)` },
-        { time: "T+0:10", desc: `Broadcasted localized emergency SMS and Push warnings to citizens` },
-        { time: "T+0:12", desc: `Created official incident ticket in NDMA tracking queue` }
+        { time: "T+0:05", desc: `Situation Analyst classified emergency: ${incident.crisis_type || 'unknown'} (Severity: ${incident.severity || 'unknown'})` },
+        { time: "T+0:07", desc: `Response Orchestrator generated the first response plan and dispatch guidance.` },
+        { time: "T+0:09", desc: `Alternate routes and alert messaging were prepared for affected areas.` },
+        { time: "T+0:10", desc: `Crisis ticketing and escalation protocols were executed.` }
     ];
 
     events.forEach(ev => {

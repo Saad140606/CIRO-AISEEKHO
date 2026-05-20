@@ -84,6 +84,9 @@ class RetryableChatModel(BaseChatModel):
         if self._fallback_factory is None or self._provider != "gemini":
             return False
 
+        if not self._is_rate_limit_error(exc):
+            return False
+
         try:
             fallback_model = self._fallback_factory()
             if fallback_model is None:
@@ -167,6 +170,9 @@ class RetryableChatModel(BaseChatModel):
         if bound_model is not None and bound_model is not self._model:
             self._model = bound_model
         return self
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        return self._retry("__call__", *args, **kwargs)
 
     def invoke(self, input, config=None, *, stop=None, **kwargs):
         return self._retry("invoke", input, config=config, stop=stop, **kwargs)
